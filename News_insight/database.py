@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 
-URL_DATABASE = "mysql+pymysql://root:Chanchal%40123@localhost:3306/inshorts_db"
+URL_DATABASE = "postgresql://neondb_owner:npg_S3xz9PrYBUTe@ep-dawn-tooth-annej652-pooler.c-6.us-east-1.aws.neon.tech/news?sslmode=require&channel_binding=require"
 
 engine=create_engine(URL_DATABASE)
 

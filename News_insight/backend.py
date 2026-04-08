@@ -83,7 +83,7 @@ db_dependency=Annotated[Session,Depends(get_db)]
 
 
 
-@app.get("/updateNews")
+@app.get("/")
 def update_news(db: db_dependency):
     try:
         articles = fetch_api()
