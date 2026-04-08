@@ -27,28 +27,14 @@ st.markdown(
 st.write("### Stay updated with the latest news")
 
 # -----------------------------
-# TOPIC SELECTOR
-# -----------------------------
-topic = st.selectbox(
-    "Choose Topic",
-    ["All", "Technology", "Business", "Sports", "Health", "Science", "Entertainment"]
-)
-
-# -----------------------------
 # DATABASE CONNECTION
 # -----------------------------
 db = SessionLocal()
 
 # -----------------------------
-# FETCH NEWS
+# FETCH NEWS (NO FILTERING)
 # -----------------------------
-query = db.query(models.News)
-
-# If you later store category
-if topic != "All":
-    query = query.filter(models.News.source == topic)
-
-all_news = query.order_by(desc(models.News.publishedAt)).all()
+all_news = db.query(models.News).order_by(desc(models.News.publishedAt)).all()
 
 # -----------------------------
 # PAGINATION
@@ -56,7 +42,7 @@ all_news = query.order_by(desc(models.News.publishedAt)).all()
 NEWS_PER_PAGE = 15
 
 total_news = len(all_news)
-total_pages = ceil(total_news / NEWS_PER_PAGE)
+total_pages = ceil(total_news / NEWS_PER_PAGE) if total_news > 0 else 1
 
 if "page_num" not in st.session_state:
     st.session_state.page_num = 1
@@ -96,24 +82,20 @@ for news in news_to_show:
 
         st.markdown(f"### {news.title}")
 
-        # FULL SUMMARY (no truncation)
         st.write(news.summarised)
 
-        # Source
         if news.source:
             st.markdown(
                 f"<span style='color:#1f77b4;font-size:13px;'>Source: {news.source}</span>",
                 unsafe_allow_html=True,
             )
 
-        # Published time
         if news.publishedAt:
             st.markdown(
                 f"<p style='color:gray;font-size:12px;'>Published: {news.publishedAt}</p>",
                 unsafe_allow_html=True,
             )
 
-        # Read full article
         if news.url:
             st.markdown(f"[Read full article]({news.url})")
 
@@ -122,7 +104,7 @@ for news in news_to_show:
 # -----------------------------
 st.markdown("---")
 
-col1, col2, col3 = st.columns([1,2,1])
+col1, col2, col3 = st.columns([1, 2, 1])
 
 with col1:
     st.button("⬅ Previous", on_click=prev_page)
