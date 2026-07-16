@@ -1,12 +1,7 @@
-# Web Framework
 fastapi
 uvicorn
-
-# Database
 SQLAlchemy
 PyMySQL
-
-# NLP & Summarization
 transformers
 torch
 sentencepiece
@@ -14,9 +9,8 @@ newspaper3k
 lxml
 lxml_html_clean
 nltk
-
-# Config & Utilities
 pydantic
 pydantic-settings
 python-dotenv
 requests
+APScheduler  
