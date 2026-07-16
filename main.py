@@ -30,17 +30,30 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(lifespan=lifespan)
-
-# --- HELPER FUNCTIONS ---
 def summarize_text(text):
     if not HF_TOKEN: return "HF_TOKEN missing"
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    
+    # HARDCODED: Using IP 3.161.109.91 instead of the domain
+    # You MUST include the 'Host' header for the SSL certificate to match
+    url = "https://3.161.109.91/models/facebook/bart-large-cnn"
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN}",
+        "Host": "api-inference.huggingface.co"
+    }
     payload = {"inputs": text[:1024]}
     
-    response = requests.post(HF_API_URL, headers=headers, json=payload)
-    if response.status_code == 200:
-        return response.json()[0].get('summary_text', 'No summary.')
-    return "Summary unavailable." # Fixed missing quote here
+    try:
+        # verify=False is used ONLY if you get SSL errors with the hardcoded IP
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            return response.json()[0].get('summary_text', 'No summary.')
+        else:
+            print(f"API Debug: Status {response.status_code}, Response: {response.text}")
+            return f"API Error: {response.status_code}"
+    except Exception as e:
+        print(f"Request exception: {e}")
+        return "Connection failed."
 
 def get_article_text(url):
     try:
