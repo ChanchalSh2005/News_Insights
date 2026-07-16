@@ -1,11 +1,22 @@
-fastapi[standard]
-sqlalchemy
-pymysql
+# Web Framework
+fastapi
+uvicorn
+
+# Database
+SQLAlchemy
+PyMySQL
+
+# NLP & Summarization
 transformers
 torch
+sentencepiece
 newspaper3k
-apscheduler
+lxml
+lxml_html_clean
+nltk
+
+# Config & Utilities
+pydantic
+pydantic-settings
 python-dotenv
-streamlit
 requests
-deep-translator
