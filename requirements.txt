@@ -2,8 +2,8 @@ fastapi
 uvicorn
 SQLAlchemy
 PyMySQL
-transformers
-torch
+
+
 sentencepiece
 newspaper3k
 lxml
