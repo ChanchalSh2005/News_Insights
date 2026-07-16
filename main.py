@@ -34,23 +34,11 @@ app = FastAPI(lifespan=lifespan)
 
 # --- HELPER FUNCTIONS ---
 def summarize_text(text):
-    if not HF_TOKEN:
-        return "Error: HF_TOKEN not set."
-    
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    # Truncate text to 1024 tokens to avoid API errors
-    payload = {"inputs": text[:1024], "parameters": {"max_length": 250, "min_length": 30}}
-    
-    try:
-        response = requests.post(HF_API_URL, headers=headers, json=payload)
-        if response.status_code == 200:
-            return response.json()[0].get('summary_text', 'No summary generated.')
-        else:
-            print(f"API Error: {response.status_code} - {response.text}")
-            return "Summary unavailable."
-    except Exception as e:
-        print(f"Summarization request failed: {e}")
-        return "Summary unavailable."
+    response = requests.post(API_URL, headers={"Authorization": f"Bearer {HF_TOKEN}"}, json={"inputs": text[:1024]})
+    if response.status_code == 200:
+        return response.json()[0]['summary_text']
+    return "Summary unavailable.
 
 def get_article_text(url):
     try:
