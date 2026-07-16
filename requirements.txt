@@ -1,0 +1,11 @@
+fastapi[standard]
+sqlalchemy
+pymysql
+transformers
+torch
+newspaper3k
+apscheduler
+python-dotenv
+streamlit
+requests
+deep-translator
