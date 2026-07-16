@@ -29,8 +29,8 @@ model = None
 async def lifespan(app: FastAPI):
     global tokenizer, model
     print("Loading model and tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained("./bart_local")
-    model = AutoModelForSeq2SeqLM.from_pretrained("./bart_local")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
+    model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
     
     # Start Scheduler
     scheduler = BackgroundScheduler()
