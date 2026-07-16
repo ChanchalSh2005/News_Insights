@@ -1,50 +1,56 @@
-from sqlalchemy.orm import Session
-from models import News_model
-from fastapi import FastAPI
-from fastapi import HTTPException,Depends,Query,Path
+from fastapi import FastAPI, HTTPException, Depends, Query
 import os
 import requests
 from dotenv import load_dotenv
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from datetime import datetime
 import traceback
 from newspaper import Article
 from apscheduler.schedulers.background import BackgroundScheduler
-from db import get_db,LocalSession
+from db import get_db, LocalSession, Base, engine
+from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from models import News_model
 from contextlib import asynccontextmanager
-from db import Base,engine
 
 Base.metadata.create_all(engine)
 load_dotenv()
-api_key=os.getenv("NEWSAPIKEY")
-# Summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
-summarizer = None
 
-os.environ["TRANSFORMERS_CACHE"] = "/app/model_cache"
-# Change your global variable
-tokenizer = None
-model = None
+# --- CONFIGURATION ---
+API_KEY = os.getenv("NEWSAPIKEY")
+HF_TOKEN = os.getenv("HF_TOKEN") # Add this to your Railway variables!
+HF_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global tokenizer, model
-    print("Loading model and tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained("sshleifer/distilbart-cnn-12-6")
-    model = AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-cnn-12-6")
-    
-    # Start Scheduler
+    # Start Scheduler without loading any ML models into RAM
     scheduler = BackgroundScheduler()
     scheduler.add_job(update_news, 'interval', minutes=30)
     scheduler.start()
-    print("Model loaded and scheduler started.")
-    
+    print("Scheduler started. Using Inference API for summarization.")
     yield
-    
-    # Shutdown Scheduler
     scheduler.shutdown()
-    tokenizer = None
-    model = None
+
+app = FastAPI(lifespan=lifespan)
+
+# --- HELPER FUNCTIONS ---
+def summarize_text(text):
+    if not HF_TOKEN:
+        return "Error: HF_TOKEN not set."
+    
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    # Truncate text to 1024 tokens to avoid API errors
+    payload = {"inputs": text[:1024], "parameters": {"max_length": 250, "min_length": 30}}
+    
+    try:
+        response = requests.post(HF_API_URL, headers=headers, json=payload)
+        if response.status_code == 200:
+            return response.json()[0].get('summary_text', 'No summary generated.')
+        else:
+            print(f"API Error: {response.status_code} - {response.text}")
+            return "Summary unavailable."
+    except Exception as e:
+        print(f"Summarization request failed: {e}")
+        return "Summary unavailable."
 
 def get_article_text(url):
     try:
@@ -55,101 +61,55 @@ def get_article_text(url):
     except Exception as e:
         print(f"Scraping error: {e}")
         return None
-app=FastAPI(lifespan=lifespan)
+
 def fetch_api():
     try:
-        url = f"https://gnews.io/api/v4/top-headlines?country=in&lang=en&apikey={api_key}&max=30"
+        url = f"https://gnews.io/api/v4/top-headlines?country=in&lang=en&apikey={API_KEY}&max=30"
         response = requests.get(url)
-        
-        # Check if the request was successful
-        if response.status_code != 200:
-            print(f"API Error: Status code {response.status_code}")
-            return [] # Return empty list instead of None
-            
-        data = response.json()
-        articles_data = data.get('articles', [])
-        
-        # Your existing mapping logic
-        articles_list = []
-        for article in articles_data:
-            articles_list.append({
-                "id": article.get("id"),
-                "title": article.get("title"),
-                "description": article.get("description"),
-                "content": article.get("content"),
-                "image": article.get("image"),
-                "url": article.get("url"),
-                "publishedAt": article.get("publishedAt"),
-                "source": article.get("source", {}).get("name")
-            })
-        return articles_list
+        if response.status_code != 200: return []
+        return response.json().get('articles', [])
     except Exception as e:
         print('API fetching Error', e)
-        return [] # Return empty list here as well
+        return []
 
 def update_news():
     db = LocalSession()
-    global tokenizer, model
     try:
         articles_data = fetch_api()
-        
-        # 1. Ensure we have data
-        if not articles_data or not isinstance(articles_data, list):
-            print("No articles fetched or data format error.")
-            return
-
         for article in articles_data:
-            # 2. Use .get() to prevent KeyErrors
             url = article.get("url")
-            title = article.get("title")
-            
-            # Skip if we don't have the bare minimum
-            if not url or not title:
+            if not url or db.query(News_model).filter(News_model.url == url).first():
                 continue
 
-            # 3. Check existence
-            if db.query(News_model).filter(News_model.url == url).first():
-                continue
-
-            # 4. Fetch the actual text content
             text = get_article_text(url)
-            if not text:
-                continue
+            if not text: continue
             
-            # 5. Generate Summary
-            inputs = tokenizer(text[:1024], return_tensors="pt", truncation=True)
-            summary_ids = model.generate(inputs["input_ids"], max_length=250, min_length=30, num_beams=4, early_stopping=True)
-            summary_text = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+            # Use the new API summarizer
+            summary_text = summarize_text(text)
 
-            # 6. Safe Date Parsing
             raw_date = article.get("publishedAt", "")
             try:
                 pub_date = datetime.strptime(raw_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
             except:
                 pub_date = datetime.now()
 
-            # 7. Use .get() for ALL fields to avoid 'str' or 'None' attribute errors
             new_article = News_model(
-                title=title,
+                title=article.get("title"),
                 description=article.get("description"),
                 summarised=summary_text,
                 image=article.get("image"),
                 url=url,
                 publishedAt=pub_date,
-                source=article.get("source") # Assuming source is a string or dict
+                source=article.get("source", {}).get("name")
             )
             db.add(new_article)
-        
         db.commit()
-        db.refresh(new_article )
-        print("Update complete.")
     except Exception as e:
-        print(f"Update error: {e}")
-        traceback.print_exc() # This will show you exactly which line failed
+        traceback.print_exc()
     finally:
         db.close()
-    
 
+# ... (Keep your existing @app.get routes here)
 
 @app.get("/news")
 
