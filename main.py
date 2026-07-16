@@ -18,9 +18,10 @@ from db import Base,engine
 Base.metadata.create_all(engine)
 load_dotenv()
 api_key=os.getenv("NEWSAPIKEY")
-# Summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+# Summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 summarizer = None
 
+os.environ["TRANSFORMERS_CACHE"] = "/app/model_cache"
 # Change your global variable
 tokenizer = None
 model = None
@@ -29,8 +30,8 @@ model = None
 async def lifespan(app: FastAPI):
     global tokenizer, model
     print("Loading model and tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
-    model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
+    tokenizer = AutoTokenizer.from_pretrained("sshleifer/distilbart-cnn-12-6")
+    model = AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-cnn-12-6")
     
     # Start Scheduler
     scheduler = BackgroundScheduler()
