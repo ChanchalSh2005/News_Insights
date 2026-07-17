@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,DeclarativeBase
 from settings import setting
-engine=create_engine(url="postgresql://mysql_4ebh_user:CZQhcUFSYiJIeIwNChx3wMrk2XVeHIqo@dpg-d9cuo7cj42us73fu2pj0-a/mysql_4ebh")
+engine=create_engine(url="mysql://root:isVMSfGtBFZHudxsZybUcyuHVhKsazpy@mysql--nzw.railway.internal:3306/railway")
 
 LocalSession=sessionmaker(bind=engine)
 class Base(DeclarativeBase):
