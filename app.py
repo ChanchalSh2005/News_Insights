@@ -1,8 +1,7 @@
 import streamlit as st
 import requests
 from deep_translator import GoogleTranslator
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
+
 
 st.set_page_config(page_title="NewsInsight Pro", layout="wide")
 
@@ -39,18 +38,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 API_BASE = "https://newsinsights-production-61d8.up.railway.app/"
-
-
-app = FastAPI()
-
-# Allow your Streamlit app to communicate with your FastAPI backend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, replace "*" with your actual Streamlit URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 def fetch_news(keyword=None):
     try:
