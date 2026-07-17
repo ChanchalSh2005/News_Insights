@@ -68,42 +68,42 @@ def fetch_api():
         print('API fetching Error', e)
         return []
 
-
 def update_news():
-    db = LocalSession()
-    try:
-        articles_data = fetch_api()
-        for article in articles_data:
-            url = article.get("url")
-            if not url or db.query(News_model).filter(News_model.url == url).first():
-                continue
+    db = LocalSession()
+    try:
+        articles_data = fetch_api()
+        for article in articles_data:
+            url = article.get("url")
+            if not url or db.query(News_model).filter(News_model.url == url).first():
+                continue
 
-            text = get_article_text(url)
-            if not text: continue
-            
-            summary_text = summarize_text(text)
+            text = get_article_text(url)
+            if not text: continue
+            
+            summary_text = summarize_text(text)
 
-            raw_date = article.get("publishedAt", "")
-            pub_date = datetime.now()
-            try:
-                pub_date = datetime.strptime(raw_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
-            except: pass
+            raw_date = article.get("publishedAt", "")
+            pub_date = datetime.now()
+            try:
+                pub_date = datetime.strptime(raw_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+            except: pass
 
-            new_article = News_model(
-                title=article.get("title"),
-                description=article.get("description"),
-                summarised=summary_text,
-                image=article.get("image"),
-                url=url,
-                publishedAt=pub_date,
-                source=article.get("source", {}).get("name") if isinstance(article.get("source"), dict) else article.get("source")
-            )
-            db.add(new_article)
-        db.commit()
-    except Exception as e:
-        traceback.print_exc()
-    finally:
-        db.close()
+            new_article = News_model(
+                title=article.get("title"),
+                description=article.get("description"),
+                summarised=summary_text,
+                image=article.get("image"),
+                url=url,
+                publishedAt=pub_date,
+                source=article.get("source", {}).get("name") if isinstance(article.get("source"), dict) else article.get("source")
+            )
+            db.add(new_article)
+        db.commit()
+    except Exception as e:
+        traceback.print_exc()
+    finally:
+        db.close()
+
 
 @app.get("/news")
 
@@ -147,6 +147,3 @@ def delete_news(news_id: int, db:Session=Depends(get_db)):
 def trigger_update():
     update_news()
     return {"message": "Update triggered manually"}
-
-
-
