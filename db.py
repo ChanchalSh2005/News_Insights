@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,DeclarativeBase
 from settings import setting
+import os
 url=os.getenv("DB_CONNECTION")
 engine=create_engine(url)
 
