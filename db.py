@@ -1,9 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,DeclarativeBase
 from settings import setting
-import os
-url=os.getenv("DB_CONNECTION")
-engine=create_engine(url)
+engine=create_engine(url=setting.DB_CONNECTION)
 
 LocalSession=sessionmaker(bind=engine)
 class Base(DeclarativeBase):
@@ -15,5 +13,4 @@ def get_db():
         yield session
     finally:
         session.close()
-        
         
