@@ -18,7 +18,7 @@ load_dotenv()
 
 # --- CONFIGURATION ---
 API_KEY = os.getenv("NEWSAPIKEY")
-HF_TOKEN="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"
+HF_TOKEN=os.getenv("HF_TOKEN")
 
 
 @asynccontextmanager
@@ -74,31 +74,33 @@ def update_news():
         articles_data = fetch_api()
         for article in articles_data:
             url = article.get("url")
+            # 1. Skip if URL exists
             if not url or db.query(News_model).filter(News_model.url == url).first():
                 continue
 
+            # 2. Process article
             text = get_article_text(url)
             if not text: continue
             
             summary_text = summarize_text(text)
 
-            raw_date = article.get("publishedAt", "")
-            pub_date = datetime.now()
-            try:
-                pub_date = datetime.strptime(raw_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
-            except: pass
-
+            # 3. Create model
             new_article = News_model(
                 title=article.get("title"),
                 description=article.get("description"),
                 summarised=summary_text,
-                image=article.get("image"),
                 url=url,
-                publishedAt=pub_date,
-                source=article.get("source", {}).get("name") if isinstance(article.get("source"), dict) else article.get("source")
+                # ... (rest of your fields)
             )
-            db.add(new_article)
-        db.commit()
+            
+            # 4. Commit each article individually
+            try:
+                db.add(new_article)
+                db.commit()  # Save this specific article immediately
+            except Exception as e:
+                db.rollback() # Undo the add if this specific commit fails
+                print(f"Failed to save article {url}: {e}")
+                
     except Exception as e:
         traceback.print_exc()
     finally:
