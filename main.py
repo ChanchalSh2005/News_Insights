@@ -19,6 +19,8 @@ load_dotenv()
 # --- CONFIGURATION ---
 API_KEY = os.getenv("NEWSAPIKEY")
 HF_TOKEN=os.getenv("HF_TOKEN")
+print(HF_TOKEN)
+
 
 
 @asynccontextmanager
