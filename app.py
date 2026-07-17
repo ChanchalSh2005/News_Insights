@@ -37,15 +37,28 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-API_BASE = "https://newsinsights-production-61d8.up.railway.app/"
+API_BASE = "https://newsinsights-production-61d8.up.railway.app"
 
 def fetch_news(keyword=None):
     try:
         url = f"{API_BASE}/search" if keyword else f"{API_BASE}/news"
         params = {"keyword": keyword} if keyword else {}
+
         response = requests.get(url, params=params, timeout=10)
-        return response.json() if response.status_code == 200 else []
-    except:
+
+        st.write("Request URL:", url)
+        st.write("Status Code:", response.status_code)
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        st.write("Articles fetched:", len(data))
+
+        return data
+
+    except Exception as e:
+        st.exception(e)
         return []
 
 # -----------------------------
