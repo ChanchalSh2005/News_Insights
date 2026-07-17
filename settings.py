@@ -4,7 +4,7 @@ from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
-    model_config=SettingsConfigDict(env_file=NONE)
+    model_config=SettingsConfigDict(env_file=".env",extra="ignore")
     DB_CONNECTION:str
 
 setting=Settings()
