@@ -4,21 +4,22 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime
 import traceback
-from bs4 import BeautifulSoup # Changed from newspaper
+from newspaper import Article
 from apscheduler.schedulers.background import BackgroundScheduler
 from db import get_db, LocalSession, Base, engine
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from models import News_model
 from contextlib import asynccontextmanager
+from huggingface_hub import InferenceClient
 
 Base.metadata.create_all(engine)
 load_dotenv()
 
 # --- CONFIGURATION ---
 API_KEY = os.getenv("NEWSAPIKEY")
-HF_TOKEN = os.getenv("HF_TOKEN")
-HF_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
+HF_TOKEN="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"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,41 +31,30 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(lifespan=lifespan)
+client = InferenceClient(api_key=HF_TOKEN)
+
 def summarize_text(text):
-    if not HF_TOKEN: return "HF_TOKEN missing"
-    
-    # HARDCODED: Using IP 3.161.109.91 instead of the domain
-    # You MUST include the 'Host' header for the SSL certificate to match
-    url = "https://3.161.109.91/models/facebook/bart-large-cnn"
-    headers = {
-        "Authorization": f"Bearer {HF_TOKEN}",
-        "Host": "api-inference.huggingface.co"
-    }
-    payload = {"inputs": text[:1024]}
-    
     try:
-        # verify=False is used ONLY if you get SSL errors with the hardcoded IP
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        
-        if response.status_code == 200:
-            return response.json()[0].get('summary_text', 'No summary.')
-        else:
-            print(f"API Debug: Status {response.status_code}, Response: {response.text}")
-            return f"API Error: {response.status_code}"
+        # Pass the token explicitly if you haven't already
+        summary = client.summarization(
+            text, 
+            model="facebook/bart-large-cnn"
+        )
+        # Check if the result is a list and has content
+        if isinstance(summary, list) and len(summary) > 0:
+            return summary
+        return summary.summary_text
     except Exception as e:
-        print(f"Request exception: {e}")
-        return "Connection failed."
+        # This will now print the REAL error (e.g., 'ConnectionTimeout', 'NameResolutionError')
+        print(f"API Error: {type(e).__name__} - {e}")
+        return "Summary could not be generated."
 
 def get_article_text(url):
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            # Extract only <p> tags to save huge amounts of RAM
-            paragraphs = [p.get_text() for p in soup.find_all('p')]
-            return " ".join(paragraphs)
-        return None
+        article = Article(url)
+        article.download()
+        article.parse()
+        return article.text
     except Exception as e:
         print(f"Scraping error: {e}")
         return None
@@ -114,4 +104,48 @@ def update_news():
     finally:
         db.close()
 
-# ... (Keep your existing @app.get routes here)
+@app.get("/news")
+
+def get_news(skip: int = Query(0, ge=0), limit: int = Query(30, gt=0), db: Session = Depends(get_db)):
+    try:
+        # update_news()
+        News_list= db.query(News_model).order_by(
+        desc(News_model.publishedAt)).offset(skip).limit(limit).all()
+        return News_list
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=404,detail=str(e))
+
+@app.get("/news/{news_id}")
+def get_one_news(news_id:int,db:Session=Depends(get_db)):
+    news=db.query(News_model).filter(News_model.id==news_id).first()
+    if not news:
+        raise HTTPException(status_code=404, detail="News not found")
+
+    return news
+
+@app.get("/search")
+def search_news(keyword: str, db:Session=Depends(get_db)):
+    return db.query(News_model).filter(
+        News_model.title.ilike(f"%{keyword}%")
+    ).all()
+
+@app.delete("/news/{news_id}")
+def delete_news(news_id: int, db:Session=Depends(get_db)):
+    news = db.query(News_model).filter(News_model.id == news_id).first()
+
+    if not news:
+        raise HTTPException(status_code=404, detail="News not found")
+
+    db.delete(news)
+    db.commit()
+
+    return {"message": "Deleted successfully"}
+
+@app.get("/trigger-update")
+def trigger_update():
+    update_news()
+    return {"message": "Update triggered manually"}
+
+
+
