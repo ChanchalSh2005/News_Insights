@@ -2,7 +2,7 @@ fastapi
 uvicorn
 SQLAlchemy
 PyMySQL
-
+huggingface_hub
 
 sentencepiece
 newspaper3k
