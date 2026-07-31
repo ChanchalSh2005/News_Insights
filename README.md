@@ -1,3 +1,7 @@
+### 🚀 Live Demo
+
+**[🌐 Open NewsInsights](https://news-insights-15.onrender.com)**
+
 # 📰 NewsInsights
 
 An AI-powered news aggregation and summarization platform that collects
