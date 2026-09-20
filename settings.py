@@ -1,11 +1,20 @@
-from pydantic_settings import BaseSettings,SettingsConfigDict
-from sqlalchemy.engine import URL
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BASE_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
-    model_config=SettingsConfigDict(env_file=".env",extra="ignore")
-    DB_CONNECTION:str
+    NEWSAPIKEY: str
+    DB_CONNECTION: str
 
-setting=Settings()
-print(setting.DB_CONNECTION)
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+
+setting = Settings()
+
+print("Settings loaded successfully")
