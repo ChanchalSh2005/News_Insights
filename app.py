@@ -44,7 +44,7 @@ st.markdown("""
 # API HELPERS
 # -----------------------------
 # Replace this line in your app.py
-API_BASE = "https://news-insights-alpha.vercel.app"
+API_BASE = "https://news-insights-alpha.vercel.app/"
 
 
 
