@@ -4,7 +4,7 @@ from settings import setting
 url=setting.DB_CONNECTION
 print("DB_CONNECTION:",url)
 print("repr =", repr(url))
-engine=create_engine(url=url)
+engine=create_engine(url=url, pool_pre_ping=True,)
 
 LocalSession=sessionmaker(bind=engine)
 class Base(DeclarativeBase):
