@@ -13,7 +13,7 @@ from models import News_model
 from contextlib import asynccontextmanager
 from huggingface_hub import InferenceClient
 
-Base.metadata.create_all(engine)
+
 load_dotenv()
 
 # --- CONFIGURATION ---
